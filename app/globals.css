@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #12263a;
+  --navy-soft: #1c3a57;
+  --gold: #c9a227;
+  --gold-soft: #f3d27a;
+  --cream: #f6f0e6;
+  --paper: #fffdf8;
+  --ink: #1b2430;
+  --muted: #6b7280;
+  --line: #eadfca;
+  --danger: #9b2c2c;
+  --success: #276749;
+}
+
+@theme inline {
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --font-cairo: var(--font-cairo);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-cairo), "Cairo", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(18, 38, 58, 0.06);
+}
+
+.gold-btn {
+  background: linear-gradient(180deg, #f3d27a 0%, #c9a227 100%);
+  color: var(--navy);
+  font-weight: 800;
+  border: 0;
+  border-radius: 16px;
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+}
+
+.gold-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.navy-btn {
+  background: var(--navy);
+  color: white;
+  font-weight: 700;
+  border: 0;
+  border-radius: 16px;
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+}
+
+.ghost-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  outline: none;
+}
+
+.field:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+}
