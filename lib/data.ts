@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { throwSupabaseError } from "@/lib/supabase/errors";
-import type { Child } from "@/lib/types";
+import type { Child, PointsRecord } from "@/lib/types";
 import { cairoToday } from "@/lib/utils";
 
 function isDailyReadingActivity(name: string) {
@@ -139,8 +139,8 @@ export async function deleteDailyReadingRecord(readingId: string) {
   if (relatedError) throwSupabaseError(relatedError, "find related points records for daily reading");
 
   const relatedIds = (relatedRecords ?? [])
-    .filter((row) => isDailyReadingActivity(row.activity_name))
-    .map((row) => row.id);
+    .filter((row: Pick<PointsRecord, "id" | "activity_name">) => isDailyReadingActivity(row.activity_name))
+    .map((row: Pick<PointsRecord, "id" | "activity_name">) => row.id);
 
   if (relatedIds.length) {
     const { error: deleteRelatedError } = await supabase

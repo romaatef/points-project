@@ -17,6 +17,11 @@ import type { Activity, Child, DailyReading, PointsRecord } from "@/lib/types";
 import { arabicError, formatDate } from "@/lib/utils";
 import { Modal } from "@/components/Modal";
 
+type PointHistoryRow = Pick<
+  PointsRecord,
+  "id" | "child_id" | "activity_id" | "activity_name" | "points" | "record_date" | "created_at"
+>;
+
 export default function HistoryPage() {
   const [records, setRecords] = useState<PointsRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -53,15 +58,15 @@ export default function HistoryPage() {
         const child = childrenById.get(childId);
         return child ? { name: child.name, group_name: child.group_name } : null;
       };
-      const pointRows = (recs.data ?? []).map((record) => ({
+      const pointRows = (recs.data ?? []).map((record: PointHistoryRow) => ({
         ...record,
         children: withChild(record.child_id),
         source: "points_record" as const,
       }));
       const coveredReadings = new Set(
         pointRows
-          .filter((row) => row.activity_name.includes("قراءة"))
-          .map((row) => `${row.child_id}|${row.record_date}`)
+          .filter((row: PointHistoryRow) => row.activity_name.includes("قراءة"))
+          .map((row: PointHistoryRow) => `${row.child_id}|${row.record_date}`)
       );
       const readingRows = ((readings.data ?? []) as DailyReading[])
         .filter((row) => !coveredReadings.has(`${row.child_id}|${row.reading_date}`))

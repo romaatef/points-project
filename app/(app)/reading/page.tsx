@@ -5,8 +5,10 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState, ErrorState, LoadingState } from "@/components/States";
 import { fetchChildren, fetchTodayReadings, registerDailyReading } from "@/lib/data";
-import type { Child } from "@/lib/types";
+import type { Child, DailyReading } from "@/lib/types";
 import { arabicError, cairoToday, formatDate, uniqueSorted } from "@/lib/utils";
+
+type TodayReading = Pick<DailyReading, "id" | "child_id" | "reading_date" | "points">;
 
 export default function ReadingPage() {
   const [children, setChildren] = useState<Child[]>([]);
@@ -27,7 +29,7 @@ export default function ReadingPage() {
         fetchTodayReadings(),
       ]);
       setChildren(kids);
-      setTodayIds(readings.map((r) => r.child_id));
+      setTodayIds(readings.map((r: TodayReading) => r.child_id));
     } catch (err) {
       setError(arabicError(err instanceof Error ? err.message : "تعذر تحميل صفحة القراءة"));
     } finally {
