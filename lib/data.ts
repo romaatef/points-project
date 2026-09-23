@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { throwSupabaseError } from "@/lib/supabase/errors";
-import type { Child, PointsRecord } from "@/lib/types";
+import type { PostgrestError } from "@supabase/supabase-js";
+import type { Child, DailyReading, PointsRecord } from "@/lib/types";
 import { cairoToday } from "@/lib/utils";
 
 function isDailyReadingActivity(name: string) {
@@ -29,27 +30,32 @@ export async function fetchChildren() {
 
   const totals = new Map<string, number>();
   const countedReadings = new Set<string>();
+  const readingDatesByChild = new Map<string, Set<string>>();
   for (const record of records ?? []) {
     totals.set(record.child_id, (totals.get(record.child_id) ?? 0) + record.points);
     if (isDailyReadingActivity(record.activity_name ?? "")) {
-      countedReadings.add(`${record.child_id}|${record.record_date}`);
+      const key = `${record.child_id}|${record.record_date}`;
+      countedReadings.add(key);
+      const dates = readingDatesByChild.get(record.child_id) ?? new Set<string>();
+      dates.add(record.record_date);
+      readingDatesByChild.set(record.child_id, dates);
     }
   }
   for (const reading of readings ?? []) {
     const key = `${reading.child_id}|${reading.reading_date}`;
-    if (countedReadings.has(key)) continue;
-    totals.set(reading.child_id, (totals.get(reading.child_id) ?? 0) + reading.points);
-  }
-  const readingCounts = new Map<string, number>();
-  for (const reading of readings ?? []) {
-    readingCounts.set(reading.child_id, (readingCounts.get(reading.child_id) ?? 0) + 1);
+    if (!countedReadings.has(key)) {
+      totals.set(reading.child_id, (totals.get(reading.child_id) ?? 0) + reading.points);
+    }
+    const dates = readingDatesByChild.get(reading.child_id) ?? new Set<string>();
+    dates.add(reading.reading_date);
+    readingDatesByChild.set(reading.child_id, dates);
   }
 
   return ((children ?? []) as ChildRow[]).map((child) => ({
     ...child,
     image_url: null,
     total_points: totals.get(child.id) ?? 0,
-    reading_count: readingCounts.get(child.id) ?? 0,
+    reading_count: readingDatesByChild.get(child.id)?.size ?? 0,
   }));
 }
 
@@ -72,12 +78,39 @@ export async function deleteActivity(activityId: string) {
 
 export async function fetchTodayReadings() {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("daily_reading")
-    .select("id, child_id, reading_date, points")
-    .eq("reading_date", cairoToday());
-  if (error) throwSupabaseError(error, "fetch today's readings");
-  return data ?? [];
+  const today = cairoToday();
+  const [
+    { data: readings, error: readingsError },
+    { data: records, error: recordsError },
+  ]: [
+    { data: Pick<DailyReading, "id" | "child_id" | "reading_date" | "points">[] | null; error: PostgrestError | null },
+    { data: { id: string; child_id: string; record_date: string; points: number; activity_name: string | null }[] | null; error: PostgrestError | null },
+  ] =
+    await Promise.all([
+      supabase
+        .from("daily_reading")
+        .select("id, child_id, reading_date, points")
+        .eq("reading_date", today),
+      supabase
+        .from("points_records")
+        .select("id, child_id, record_date, points, activity_name")
+        .eq("record_date", today),
+    ]);
+  if (readingsError) throwSupabaseError(readingsError, "fetch today's readings");
+  if (recordsError) throwSupabaseError(recordsError, "fetch today's reading records");
+
+  const readingIds = new Set((readings ?? []).map((reading) => reading.child_id));
+  const activityReadings = (records ?? [])
+    .filter((record) => isDailyReadingActivity(record.activity_name ?? ""))
+    .filter((record) => !readingIds.has(record.child_id))
+    .map((record) => ({
+      id: record.id,
+      child_id: record.child_id,
+      reading_date: record.record_date,
+      points: record.points,
+    }));
+
+  return [...(readings ?? []), ...activityReadings];
 }
 
 export async function registerDailyReading(childId: string) {
