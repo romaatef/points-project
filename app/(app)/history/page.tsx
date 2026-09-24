@@ -22,6 +22,8 @@ type PointHistoryRow = Pick<
   "id" | "child_id" | "activity_id" | "activity_name" | "points" | "record_date" | "created_at"
 >;
 
+const historyViewClearedKey = "points-history-view-cleared";
+
 export default function HistoryPage() {
   const [records, setRecords] = useState<PointsRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -85,10 +87,11 @@ export default function HistoryPage() {
         }));
       setChildren(kids);
       setActivities(acts as Activity[]);
+      const loadedRecords = [...pointRows, ...readingRows].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ) as PointsRecord[];
       setRecords(
-        [...pointRows, ...readingRows].sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ) as PointsRecord[]
+        window.localStorage.getItem(historyViewClearedKey) === "true" ? [] : loadedRecords
       );
     } catch (err) {
       setError(arabicError(err instanceof Error ? err.message : "تعذر تحميل السجل"));
@@ -150,6 +153,7 @@ export default function HistoryPage() {
 
   function confirmClear() {
     setClearing(true);
+    window.localStorage.setItem(historyViewClearedKey, "true");
     setRecords([]);
     setQuery("");
     toast.success("تم تحديث عرض السجل فقط");
