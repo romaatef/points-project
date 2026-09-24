@@ -150,7 +150,9 @@ export default function HistoryPage() {
 
   function confirmClear() {
     setClearing(true);
-    setRecords([]);
+    setRecords((currentRecords) =>
+      currentRecords.filter((record) => record.source === "daily_reading")
+    );
     setQuery("");
     toast.success("تم تنظيف عرض السجل");
     setClearOpen(false);
