@@ -24,6 +24,16 @@ type PointHistoryRow = Pick<
 
 const historyViewClearedKey = "points-history-view-cleared";
 
+function getHistoryViewClearedAt() {
+  const storedValue = window.localStorage.getItem(historyViewClearedKey);
+  if (storedValue === "true") {
+    const migratedValue = new Date().toISOString();
+    window.localStorage.setItem(historyViewClearedKey, migratedValue);
+    return migratedValue;
+  }
+  return storedValue;
+}
+
 export default function HistoryPage() {
   const [records, setRecords] = useState<PointsRecord[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -90,9 +100,13 @@ export default function HistoryPage() {
       const loadedRecords = [...pointRows, ...readingRows].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ) as PointsRecord[];
-      setRecords(
-        window.localStorage.getItem(historyViewClearedKey) === "true" ? [] : loadedRecords
-      );
+      const clearedAt = getHistoryViewClearedAt();
+      const visibleRecords = clearedAt
+        ? loadedRecords.filter(
+            (record) => new Date(record.created_at).getTime() > new Date(clearedAt).getTime()
+          )
+        : loadedRecords;
+      setRecords(visibleRecords);
     } catch (err) {
       setError(arabicError(err instanceof Error ? err.message : "تعذر تحميل السجل"));
     } finally {
@@ -153,7 +167,7 @@ export default function HistoryPage() {
 
   function confirmClear() {
     setClearing(true);
-    window.localStorage.setItem(historyViewClearedKey, "true");
+    window.localStorage.setItem(historyViewClearedKey, new Date().toISOString());
     setRecords([]);
     setQuery("");
     toast.success("تم تحديث عرض السجل فقط");
