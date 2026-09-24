@@ -72,13 +72,14 @@ export async function clearPointsHistory() {
       hint: error.hint,
       code: error.code,
     });
-    if (error.code === "PGRST202") {
-      throw new Error("دالة تنظيف السجل غير متاحة في Supabase. أعد تحميل schema بعد إنشاء الدالة.");
-    }
-    if (error.code === "42501") {
-      throw new Error("ليس لديك صلاحية تنظيف السجل في Supabase.");
-    }
-    throwSupabaseError(error, "clear points history");
+    throw new Error(
+      [
+        `message: ${error.message || "—"}`,
+        `details: ${error.details || "—"}`,
+        `hint: ${error.hint || "—"}`,
+        `code: ${error.code || "—"}`,
+      ].join(" | ")
+    );
   }
 }
 
