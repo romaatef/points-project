@@ -136,6 +136,18 @@ export async function fetchTodayReadings() {
   return [...(readings ?? []), ...activityReadings];
 }
 
+export async function fetchTodayActivityChildIds(activityId: string) {
+  const supabase = createClient();
+  type ActivityRecord = { child_id: string };
+  const { data, error } = await supabase
+    .from("points_records")
+    .select("child_id")
+    .eq("activity_id", activityId)
+    .eq("record_date", cairoToday());
+  if (error) throwSupabaseError(error, "fetch today's activity records");
+  return (data as ActivityRecord[] | null ?? []).map((record) => record.child_id);
+}
+
 export async function registerDailyReading(childId: string) {
   const supabase = createClient();
   const today = cairoToday();

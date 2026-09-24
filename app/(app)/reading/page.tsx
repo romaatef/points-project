@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState, ErrorState, LoadingState } from "@/components/States";
 import {
   awardActivityPoints,
+  fetchTodayActivityChildIds,
   fetchActivities,
   fetchChildren,
   fetchTodayReadings,
@@ -20,6 +21,7 @@ export default function ReadingPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [todayIds, setTodayIds] = useState<string[]>([]);
+  const [todayActivityIds, setTodayActivityIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -51,6 +53,18 @@ export default function ReadingPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!selectedActivityId) {
+      setTodayActivityIds([]);
+      return;
+    }
+    fetchTodayActivityChildIds(selectedActivityId)
+      .then(setTodayActivityIds)
+      .catch((err) => {
+        setError(arabicError(err instanceof Error ? err.message : "تعذر تحميل نشاط اليوم"));
+      });
+  }, [selectedActivityId]);
+
   const groups = uniqueSorted(children.map((c) => c.group_name));
   const filtered = useMemo(
     () =>
@@ -73,6 +87,7 @@ export default function ReadingPage() {
       const points = result.points;
       toast.success(isReadingMode ? "✓ تم تسجيل القراءة" : "✓ تمت إضافة النقاط");
       if (isReadingMode) setTodayIds((prev) => [...prev, id]);
+      else setTodayActivityIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
       setChildren((prev) =>
         prev.map((c) =>
           c.id === id
@@ -164,7 +179,9 @@ export default function ReadingPage() {
       ) : (
         <div className="grid gap-3">
           {filtered.map((child) => {
-            const done = isReadingMode && todayIds.includes(child.id);
+            const done = isReadingMode
+              ? todayIds.includes(child.id)
+              : todayActivityIds.includes(child.id);
             return (
               <div key={child.id} className="card p-4 flex flex-wrap items-center gap-3 justify-between">
                 <label className="flex items-center gap-3">
