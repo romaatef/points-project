@@ -66,12 +66,11 @@ export async function clearPointsHistory() {
   const supabase = createClient();
   const { error } = await supabase.rpc("clear_points_history");
   if (error) {
-    console.error("[Supabase RPC] clear_points_history failed", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-    });
+    console.error("[Supabase RPC] message:", error.message);
+    console.error("[Supabase RPC] details:", error.details);
+    console.error("[Supabase RPC] hint:", error.hint);
+    console.error("[Supabase RPC] code:", error.code);
+    console.error("[Supabase RPC] full error:", JSON.stringify(error, null, 2));
     throw new Error(
       [
         `message: ${error.message || "—"}`,
