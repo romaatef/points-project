@@ -43,9 +43,17 @@ export function arabicError(message: string) {
     "Invalid login credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
     "Email not confirmed": "البريد الإلكتروني غير مؤكد بعد",
     "User already registered": "هذا المستخدم مسجّل بالفعل",
+    "JWT expired": "انتهت جلسة الدخول. سجّل الخروج ثم ادخل مرة أخرى",
+    "Invalid JWT": "جلسة الدخول غير صالحة. سجّل الخروج ثم ادخل مرة أخرى",
   };
   if (map[message]) return map[message];
   if (message.includes("تم تسجيل القراءة")) return message;
+  if (message.toLowerCase().includes("permission denied") || message.toLowerCase().includes("row-level security")) {
+    return "ليس لديك صلاحية قراءة البيانات. تأكد من تسجيل الدخول وتشغيل سياسات Supabase.";
+  }
+  if (message.toLowerCase().includes("relation") && message.toLowerCase().includes("does not exist")) {
+    return "جداول قاعدة البيانات غير موجودة. شغّل ملف supabase/schema.sql في Supabase SQL Editor.";
+  }
   if (message.toLowerCase().includes("duplicate") || message.includes("unique")) {
     return "هذه البيانات موجودة بالفعل";
   }

@@ -65,7 +65,15 @@ export async function fetchChildren() {
 export async function clearPointsHistory() {
   const supabase = createClient();
   const { error } = await supabase.rpc("clear_points_history");
-  if (error) throwSupabaseError(error, "clear points history");
+  if (error) {
+    if (error.code === "PGRST202") {
+      throw new Error("دالة تنظيف السجل غير متاحة في Supabase. أعد تحميل schema بعد إنشاء الدالة.");
+    }
+    if (error.code === "42501") {
+      throw new Error("ليس لديك صلاحية تنظيف السجل في Supabase.");
+    }
+    throwSupabaseError(error, "clear points history");
+  }
 }
 
 export async function fetchActivities() {

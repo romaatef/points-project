@@ -1,5 +1,41 @@
--- صلاحيات الجداول الموجودة حاليًا فقط.
--- هذا الملف لا ينشئ جداول ولا يغير الأعمدة ولا يحذف بيانات.
+-- ينشئ الجداول المطلوبة إن لم تكن موجودة، ثم يضبط الأعمدة والصلاحيات.
+
+create table if not exists public.children (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  group_name text not null,
+  stage text not null,
+  image_url text,
+  baseline_points integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.activities (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  points integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.points_records (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references public.children(id) on delete cascade,
+  activity_id uuid references public.activities(id) on delete set null,
+  activity_name text not null,
+  points integer not null,
+  record_date date not null default current_date,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.daily_reading (
+  id uuid primary key default gen_random_uuid(),
+  child_id uuid not null references public.children(id) on delete cascade,
+  reading_date date not null,
+  points integer not null default 5,
+  created_at timestamptz not null default now(),
+  unique (child_id, reading_date)
+);
 
 alter table public.children
   add column if not exists baseline_points integer not null default 0;
