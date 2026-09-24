@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 import { throwSupabaseError } from "@/lib/supabase/errors";
 import {
   awardActivityPoints,
-  clearPointsHistory,
   deleteDailyReadingRecord,
   deletePointsRecord,
   fetchActivities,
@@ -152,10 +151,10 @@ export default function HistoryPage() {
   async function confirmClear() {
     setClearing(true);
     try {
-      await clearPointsHistory();
-      toast.success("تم تنظيف السجل مع الحفاظ على نقاط الأطفال");
+      setRecords([]);
+      setQuery("");
+      toast.success("تم تنظيف عرض السجل");
       setClearOpen(false);
-      await load(false);
     } catch (err) {
       toast.error(arabicError(err instanceof Error ? err.message : "تعذر تنظيف السجل"));
     } finally {
