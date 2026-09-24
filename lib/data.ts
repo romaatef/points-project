@@ -66,6 +66,12 @@ export async function clearPointsHistory() {
   const supabase = createClient();
   const { error } = await supabase.rpc("clear_points_history");
   if (error) {
+    console.error("[Supabase RPC] clear_points_history failed", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
     if (error.code === "PGRST202") {
       throw new Error("دالة تنظيف السجل غير متاحة في Supabase. أعد تحميل schema بعد إنشاء الدالة.");
     }
