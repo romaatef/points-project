@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { throwSupabaseError } from "@/lib/supabase/errors";
 import {
   awardActivityPoints,
+  clearPointsHistory,
   deleteDailyReadingRecord,
   deletePointsRecord,
   fetchActivities,
@@ -34,6 +35,8 @@ export default function HistoryPage() {
   const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PointsRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   async function load(showSpinner = true) {
     if (showSpinner) setLoading(true);
@@ -146,6 +149,20 @@ export default function HistoryPage() {
     }
   }
 
+  async function confirmClear() {
+    setClearing(true);
+    try {
+      await clearPointsHistory();
+      toast.success("تم تنظيف السجل مع الحفاظ على نقاط الأطفال");
+      setClearOpen(false);
+      await load(false);
+    } catch (err) {
+      toast.error(arabicError(err instanceof Error ? err.message : "تعذر تنظيف السجل"));
+    } finally {
+      setClearing(false);
+    }
+  }
+
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} />;
 
@@ -155,9 +172,18 @@ export default function HistoryPage() {
         title="سجل النقاط"
         subtitle="كل النقاط المسجلة مع القيمة المحفوظة وقت التسجيل"
         actions={
-          <button className="gold-btn" onClick={() => setOpen(true)}>
-            إضافة نقاط لنشاط
-          </button>
+          <>
+            <button
+              className="ghost-btn text-danger"
+              disabled={clearing || records.length === 0}
+              onClick={() => setClearOpen(true)}
+            >
+              تنظيف السجل
+            </button>
+            <button className="gold-btn" onClick={() => setOpen(true)}>
+              إضافة نقاط لنشاط
+            </button>
+          </>
         }
       />
       <input
@@ -233,6 +259,26 @@ export default function HistoryPage() {
           <button className="gold-btn w-full" disabled={saving} onClick={award}>
             {saving ? "جاري الحفظ..." : "حفظ"}
           </button>
+        </div>
+      </Modal>
+      <Modal
+        open={clearOpen}
+        title="تنظيف سجل النقاط"
+        onClose={() => !clearing && setClearOpen(false)}
+      >
+        <div className="space-y-4">
+          <p className="text-navy font-bold">هل تريد تنظيف سجل النقاط بالكامل؟</p>
+          <p className="text-muted">
+            سيتم حذف السجلات الظاهرة فقط، مع الاحتفاظ بإجمالي نقاط كل طفل. لا يمكن التراجع عن هذا الإجراء.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <button className="ghost-btn" disabled={clearing} onClick={() => setClearOpen(false)}>
+              إلغاء
+            </button>
+            <button className="navy-btn bg-danger" disabled={clearing} onClick={confirmClear}>
+              {clearing ? "جاري التنظيف..." : "تنظيف السجل"}
+            </button>
+          </div>
         </div>
       </Modal>
       <Modal

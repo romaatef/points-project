@@ -1,6 +1,9 @@
 -- صلاحيات الجداول الموجودة حاليًا فقط.
 -- هذا الملف لا ينشئ جداول ولا يغير الأعمدة ولا يحذف بيانات.
 
+alter table public.children
+  add column if not exists baseline_points integer not null default 0;
+
 alter table public.children enable row level security;
 alter table public.activities enable row level security;
 alter table public.points_records enable row level security;
@@ -28,3 +31,46 @@ grant select, insert, update, delete on public.children to authenticated;
 grant select, insert, update, delete on public.activities to authenticated;
 grant select, insert, update, delete on public.points_records to authenticated;
 grant select, insert, update, delete on public.daily_reading to authenticated;
+
+create or replace function public.clear_points_history()
+returns void
+language plpgsql
+security invoker
+as $$
+begin
+  with point_totals as (
+    select child_id, coalesce(sum(points), 0) as points
+    from public.points_records
+    group by child_id
+  ), reading_totals as (
+    select reading.child_id, coalesce(sum(reading.points), 0) as points
+    from public.daily_reading reading
+    where not exists (
+      select 1
+      from public.points_records record
+      where record.child_id = reading.child_id
+        and record.record_date = reading.reading_date
+        and (
+          record.activity_name ilike '%قراءة%'
+          or lower(record.activity_name) like '%bible%'
+          or lower(record.activity_name) like '%daily_reading%'
+        )
+    )
+    group by reading.child_id
+  ), totals as (
+    select coalesce(point_totals.child_id, reading_totals.child_id) as child_id,
+      coalesce(point_totals.points, 0) + coalesce(reading_totals.points, 0) as points
+    from point_totals
+    full join reading_totals using (child_id)
+  )
+  update public.children child
+  set baseline_points = child.baseline_points + totals.points
+  from totals
+  where child.id = totals.child_id;
+
+  delete from public.points_records;
+  delete from public.daily_reading;
+end;
+$$;
+
+grant execute on function public.clear_points_history() to authenticated;

@@ -19,7 +19,10 @@ export async function fetchChildren() {
   const supabase = createClient();
   const [{ data: children, error: childrenError }, { data: records, error: recordsError }, { data: readings, error: readingsError }] =
     await Promise.all([
-      supabase.from("children").select("id, name, group_name, stage, created_at").order("created_at", { ascending: false }),
+      supabase
+        .from("children")
+        .select("id, name, group_name, stage, baseline_points, created_at")
+        .order("created_at", { ascending: false }),
       supabase.from("points_records").select("child_id, points, record_date, activity_name"),
       supabase.from("daily_reading").select("child_id, points, reading_date"),
     ]);
@@ -54,9 +57,15 @@ export async function fetchChildren() {
   return ((children ?? []) as ChildRow[]).map((child) => ({
     ...child,
     image_url: null,
-    total_points: totals.get(child.id) ?? 0,
+    total_points: child.baseline_points + (totals.get(child.id) ?? 0),
     reading_count: readingDatesByChild.get(child.id)?.size ?? 0,
   }));
+}
+
+export async function clearPointsHistory() {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("clear_points_history");
+  if (error) throwSupabaseError(error, "clear points history");
 }
 
 export async function fetchActivities() {

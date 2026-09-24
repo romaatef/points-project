@@ -4,6 +4,7 @@ export type Child = {
   group_name: string;
   stage: string;
   image_url: string | null;
+  baseline_points: number;
   total_points: number;
   reading_count: number;
   created_at: string;
