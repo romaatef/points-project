@@ -150,11 +150,9 @@ export default function HistoryPage() {
 
   function confirmClear() {
     setClearing(true);
-    setRecords((currentRecords) =>
-      currentRecords.filter((record) => record.source === "daily_reading")
-    );
+    setRecords([]);
     setQuery("");
-    toast.success("تم إخفاء سجلات النقاط من العرض فقط، ولم تُحذف أي بيانات");
+    toast.success("تم تحديث عرض السجل فقط");
     setClearOpen(false);
     setClearing(false);
   }
