@@ -154,7 +154,7 @@ export default function HistoryPage() {
       currentRecords.filter((record) => record.source === "daily_reading")
     );
     setQuery("");
-    toast.success("تم تنظيف عرض السجل");
+    toast.success("تم إخفاء سجلات النقاط من العرض فقط، ولم تُحذف أي بيانات");
     setClearOpen(false);
     setClearing(false);
   }
@@ -265,7 +265,7 @@ export default function HistoryPage() {
         <div className="space-y-4">
           <p className="text-navy font-bold">هل تريد تنظيف سجل النقاط بالكامل؟</p>
           <p className="text-muted">
-            سيتم حذف السجلات الظاهرة فقط، مع الاحتفاظ بإجمالي نقاط كل طفل. لا يمكن التراجع عن هذا الإجراء.
+            سيتم إخفاء سجلات النقاط من هذه الصفحة فقط. قراءات اليوم وبيانات الأطفال لن تتغير.
           </p>
           <div className="flex gap-2 justify-end">
             <button className="ghost-btn" disabled={clearing} onClick={() => setClearOpen(false)}>
