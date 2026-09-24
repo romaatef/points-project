@@ -148,18 +148,13 @@ export default function HistoryPage() {
     }
   }
 
-  async function confirmClear() {
+  function confirmClear() {
     setClearing(true);
-    try {
-      setRecords([]);
-      setQuery("");
-      toast.success("تم تنظيف عرض السجل");
-      setClearOpen(false);
-    } catch (err) {
-      toast.error(arabicError(err instanceof Error ? err.message : "تعذر تنظيف السجل"));
-    } finally {
-      setClearing(false);
-    }
+    setRecords([]);
+    setQuery("");
+    toast.success("تم تنظيف عرض السجل");
+    setClearOpen(false);
+    setClearing(false);
   }
 
   if (loading) return <LoadingState />;
