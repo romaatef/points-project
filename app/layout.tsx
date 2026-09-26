@@ -1,4 +1,4 @@
-import { Cairo } from "next/font/google";
+import { Cairo, Tajawal } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -6,6 +6,12 @@ const cairo = Cairo({
   subsets: ["arabic", "latin"],
   weight: ["400", "600", "700", "800"],
   variable: "--font-cairo",
+});
+
+const tajawal = Tajawal({
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "700", "800"],
+  variable: "--font-tajawal",
 });
 
 export const metadata = {
@@ -20,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${cairo.variable} ${cairo.className} antialiased`}>
+      <body className={`${cairo.variable} ${tajawal.variable} ${cairo.className} antialiased`}>
         {children}
         <Toaster
           position="top-center"

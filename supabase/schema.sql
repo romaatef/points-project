@@ -37,6 +37,15 @@ create table if not exists public.daily_reading (
   unique (child_id, reading_date)
 );
 
+create table if not exists public.monthly_reading_percentages (
+  month_start date primary key,
+  total_children integer not null default 0,
+  read_children integer not null default 0,
+  percentage integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.children
   add column if not exists baseline_points integer not null default 0;
 
@@ -44,6 +53,7 @@ alter table public.children enable row level security;
 alter table public.activities enable row level security;
 alter table public.points_records enable row level security;
 alter table public.daily_reading enable row level security;
+alter table public.monthly_reading_percentages enable row level security;
 
 drop policy if exists "children_authenticated_all" on public.children;
 create policy "children_authenticated_all" on public.children
@@ -61,12 +71,17 @@ drop policy if exists "daily_reading_authenticated_all" on public.daily_reading;
 create policy "daily_reading_authenticated_all" on public.daily_reading
   for all to authenticated using (true) with check (true);
 
+drop policy if exists "monthly_reading_percentages_authenticated_all" on public.monthly_reading_percentages;
+create policy "monthly_reading_percentages_authenticated_all" on public.monthly_reading_percentages
+  for all to authenticated using (true) with check (true);
+
 grant usage on schema public to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 grant select, insert, update, delete on public.children to authenticated;
 grant select, insert, update, delete on public.activities to authenticated;
 grant select, insert, update, delete on public.points_records to authenticated;
 grant select, insert, update, delete on public.daily_reading to authenticated;
+grant select, insert, update, delete on public.monthly_reading_percentages to authenticated;
 
 create or replace function public.clear_points_history()
 returns void
