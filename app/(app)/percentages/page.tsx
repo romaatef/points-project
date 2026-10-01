@@ -23,15 +23,19 @@ function monthKey(year: number, month: number) {
   return `${year}-${String(month + 1).padStart(2, "0")}`;
 }
 
-function getMonthsFromCurrentToOctober2028(): Month[] {
+function getMonthsFromCurrentToOctober2028(firstReadingDate?: string): Month[] {
   const [yearText, monthText] = cairoToday().split("-");
   const currentYear = Number(yearText);
   const currentMonth = Number(monthText) - 1;
+  const currentKey = monthKey(currentYear, currentMonth);
+  const firstReadingMonth = firstReadingDate?.slice(0, 7);
+  const startKey = firstReadingMonth && firstReadingMonth < currentKey ? firstReadingMonth : currentKey;
+  const [startYearText, startMonthText] = startKey.split("-");
   const months: Month[] = [];
   const end = new Date(2028, 9, 1);
 
   for (
-    let date = new Date(currentYear, currentMonth, 1);
+    let date = new Date(Number(startYearText), Number(startMonthText) - 1, 1);
     date <= end;
     date.setMonth(date.getMonth() + 1)
   ) {
@@ -54,10 +58,19 @@ function isReadingActivity(name: string | null) {
 }
 
 export default function MonthlyReadingPage() {
-  const months = useMemo(getMonthsFromCurrentToOctober2028, []);
   const [children, setChildren] = useState<Child[]>([]);
   const [readingRecords, setReadingRecords] = useState<ReadingRecord[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState(months[0]?.key ?? "");
+  const months = useMemo(() => {
+    const firstReadingDate = readingRecords.reduce<string | undefined>(
+      (earliest, record) => (!earliest || record.date < earliest ? record.date : earliest),
+      undefined
+    );
+    return getMonthsFromCurrentToOctober2028(firstReadingDate);
+  }, [readingRecords]);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const [yearText, monthText] = cairoToday().split("-");
+    return monthKey(Number(yearText), Number(monthText) - 1);
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
