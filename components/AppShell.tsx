@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
-  Handshake,
   Percent,
   LayoutDashboard,
   LogOut,
@@ -16,7 +15,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -25,8 +24,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
   { href: "/children", label: "المخدومين", icon: Users },
-  { href: "/reading", label: "تسجيل القراءة", icon: BookOpen },
-  { href: "/reading?mode=activity", label: "تسجيل المشاركة", icon: Handshake },
+  { href: "/reading", label: "تسجيل نقاط", icon: BookOpen },
   { href: "/history", label: "سجل النقاط", icon: NotebookPen },
   { href: "/leaderboard", label: "الترتيب", icon: Medal },
   { href: "/percentages", label: "نسب القراءة الشهرية", icon: Percent },
@@ -34,9 +32,8 @@ const links = [
   { href: "/import", label: "استيراد Excel", icon: Upload },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -52,13 +49,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <nav className="flex flex-col gap-1">
       {links.map((link) => {
         const linkPath = link.href.split("?")[0];
-        const activityMode = searchParams.get("mode") === "activity";
-        const isActivityLink = link.href.includes("mode=activity");
-        const active =
-          (pathname === linkPath &&
-            (isActivityLink === activityMode || (linkPath !== "/reading" && !isActivityLink))) ||
-          pathname.startsWith(`${linkPath}/`);
+        const active = pathname === linkPath || pathname.startsWith(`${linkPath}/`);
+
         const Icon = link.icon;
+
         return (
           <Link
             key={link.href}
@@ -86,9 +80,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Logo src="/logo.png" size={52} className="rounded-full" />
           <p className="mt-3 font-extrabold text-gold-soft">أسرة الأنطوني</p>
         </div>
+
         <div className="flex-1">{nav}</div>
-        <p className="mb-3 text-center text-xs font-bold text-cream/60">made by mariam atef</p>
-        <button onClick={logout} className="ghost-btn border-white/20 !text-cream flex items-center justify-center gap-2 px-4 py-3 font-bold">
+
+        <p className="mb-3 text-center text-xs font-bold text-cream/60">
+          made by mariam atef
+        </p>
+
+        <button
+          onClick={logout}
+          className="ghost-btn border-white/20 !text-cream flex items-center justify-center gap-2 px-4 py-3 font-bold"
+        >
           <LogOut size={16} />
           تسجيل الخروج
         </button>
@@ -100,21 +102,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Logo src="/logo.png" size={40} />
             <span className="font-extrabold">نقاط الأطفال</span>
           </div>
+
           <button onClick={() => setOpen((v) => !v)} className="p-2">
             {open ? <X /> : <Menu />}
           </button>
         </header>
+
         {open && (
           <div className="lg:hidden bg-navy text-cream p-4 space-y-4">
             {nav}
-            <p className="text-center text-xs font-bold text-cream/60">made by mariam atef</p>
-            <button onClick={logout} className="ghost-btn w-full border-white/20 !text-cream px-4 py-3 font-bold">
+
+            <p className="text-center text-xs font-bold text-cream/60">
+              made by mariam atef
+            </p>
+
+            <button
+              onClick={logout}
+              className="ghost-btn w-full border-white/20 !text-cream px-4 py-3 font-bold"
+            >
               تسجيل الخروج
             </button>
           </div>
         )}
+
         <div className="p-4 md:p-8 max-w-7xl mx-auto">{children}</div>
       </div>
     </div>
+  );
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <AppShellContent>{children}</AppShellContent>
+    </Suspense>
   );
 }

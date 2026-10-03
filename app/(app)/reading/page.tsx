@@ -31,6 +31,8 @@ export default function ReadingPage() {
   const [readingPoints, setReadingPoints] = useState(5);
   const [selectedActivityId, setSelectedActivityId] = useState("");
   const [activityMode, setActivityMode] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(cairoToday());
+  const [checkingDate, setCheckingDate] = useState(true);
 
   useEffect(() => {
     setActivityMode(new URLSearchParams(window.location.search).get("mode") === "activity");
@@ -39,13 +41,11 @@ export default function ReadingPage() {
   async function load() {
     setLoading(true);
     try {
-      const [kids, readings, acts] = await Promise.all([
+      const [kids, acts] = await Promise.all([
         fetchChildren(),
-        fetchTodayReadings(),
         fetchActivities(),
       ]);
       setChildren(kids);
-      setTodayIds(readings.map((r: TodayReading) => r.child_id));
       setActivities(acts as Activity[]);
     } catch (err) {
       setError(arabicError(err instanceof Error ? err.message : "تعذر تحميل صفحة القراءة"));
@@ -59,16 +59,31 @@ export default function ReadingPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedActivityId) {
-      setTodayActivityIds([]);
-      return;
-    }
-    fetchTodayActivityChildIds(selectedActivityId)
-      .then(setTodayActivityIds)
+    let cancelled = false;
+    setCheckingDate(true);
+    Promise.all([
+      fetchTodayReadings(selectedDate),
+      selectedActivityId
+        ? fetchTodayActivityChildIds(selectedActivityId, selectedDate)
+        : Promise.resolve([]),
+    ])
+      .then(([readings, activityIds]) => {
+        if (cancelled) return;
+        setTodayIds(readings.map((reading: TodayReading) => reading.child_id));
+        setTodayActivityIds(activityIds);
+      })
       .catch((err) => {
-        setError(arabicError(err instanceof Error ? err.message : "تعذر تحميل نشاط اليوم"));
+        if (!cancelled) {
+          setError(arabicError(err instanceof Error ? err.message : "تعذر تحميل تسجيلات التاريخ المحدد"));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingDate(false);
       });
-  }, [selectedActivityId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate, selectedActivityId]);
 
   const groups = uniqueSorted(children.map((c) => c.group_name));
   const filtered = useMemo(
@@ -91,8 +106,8 @@ export default function ReadingPage() {
     setBusy(id);
     try {
       const result = isReadingMode
-        ? await registerDailyReading(id)
-        : await awardActivityPoints(id, selectedActivityId);
+        ? await registerDailyReading(id, selectedDate)
+        : await awardActivityPoints(id, selectedActivityId, selectedDate);
       const points = result.points;
       toast.success(isReadingMode ? "✓ تم تسجيل القراءة" : "✓ تمت إضافة النقاط");
       if (isReadingMode) setTodayIds((prev) => [...prev, id]);
@@ -116,7 +131,8 @@ export default function ReadingPage() {
   }
 
   async function registerMany() {
-    const ids = isReadingMode ? selected.filter((id) => !todayIds.includes(id)) : selected;
+    const registeredIds = isReadingMode ? todayIds : todayActivityIds;
+    const ids = selected.filter((id) => !registeredIds.includes(id));
     if (!ids.length) {
       toast.error(isReadingMode ? "اختر أطفالًا لم يُسجلوا بعد" : "اختر أطفالًا لإضافة النقاط لهم");
       return;
@@ -137,13 +153,17 @@ export default function ReadingPage() {
   return (
     <div>
       <PageHeader
-        title="تسجيل القراءة اليومية"
-        subtitle={`تاريخ اليوم: ${formatDate(cairoToday())} — لا يمكن تكرار التسجيل لنفس الطفل في نفس اليوم`}
+        title={activityMode ? "تسجيل المشاركة" : "تسجيل القراءة اليومية"}
+        subtitle={
+          activityMode
+            ? `تاريخ التسجيل: ${formatDate(selectedDate)} — لا يمكن تكرار تسجيل نفس المشاركة للطفل في التاريخ نفسه`
+            : `تاريخ التسجيل: ${formatDate(selectedDate)} — لا يمكن تكرار التسجيل للطفل في التاريخ نفسه`
+        }
         actions={
           <button
             className="gold-btn"
             onClick={registerMany}
-            disabled={!selected.length || (activityMode && !selectedActivityId)}
+            disabled={!selected.length || checkingDate || (activityMode && !selectedActivityId)}
           >
             تسجيل المحددين ({selected.length})
           </button>
@@ -178,6 +198,19 @@ export default function ReadingPage() {
             </option>
           ))}
         </select>
+        <label className="grid gap-1 text-sm font-bold text-navy">
+          <span>تاريخ التسجيل</span>
+          <input
+            className="field"
+            type="date"
+            value={selectedDate}
+            max={cairoToday()}
+            onChange={(e) => {
+              setSelectedDate(e.target.value);
+              setSelected([]);
+            }}
+          />
+        </label>
         <select className="field" value={group} onChange={(e) => setGroup(e.target.value)}>
           <option value="">كل المجموعات</option>
           {groups.map((g) => (
@@ -188,7 +221,7 @@ export default function ReadingPage() {
 
       <div className="mb-4 card p-4 font-bold text-navy">
         {isReadingMode
-          ? `لم يسجلوا اليوم: ${missing.length} من ${filtered.length}`
+          ? `لم يسجلوا بتاريخ ${formatDate(selectedDate)}: ${missing.length} من ${filtered.length}`
           : selectedActivity
             ? `النشاط المختار: ${selectedActivity.name} (+${selectedActivity.points})`
             : "اختاري نوع المشاركة أولًا"}
@@ -207,7 +240,7 @@ export default function ReadingPage() {
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    disabled={done}
+                    disabled={done || checkingDate}
                     checked={selected.includes(child.id)}
                     onChange={() => toggle(child.id)}
                   />
@@ -223,7 +256,7 @@ export default function ReadingPage() {
                 ) : (
                   <button
                     className="gold-btn"
-                    disabled={busy === child.id || (activityMode && !selectedActivityId)}
+                    disabled={busy === child.id || checkingDate || (activityMode && !selectedActivityId)}
                     onClick={() => registerOne(child.id)}
                   >
                     {activityMode && !selectedActivityId
@@ -232,7 +265,7 @@ export default function ReadingPage() {
                       ? "جاري التسجيل..."
                       : isReadingMode
                         ? `تسجيل القراءة +${readingPoints}`
-                        : `إضافة نقاط +${selectedActivity?.points ?? 0}`}
+                        : `تسجيل المشاركة +${selectedActivity?.points ?? 0}`}
                   </button>
                 )}
               </div>

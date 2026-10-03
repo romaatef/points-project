@@ -99,9 +99,8 @@ export async function deleteActivity(activityId: string) {
   if (error) throwSupabaseError(error, "delete activity");
 }
 
-export async function fetchTodayReadings() {
+export async function fetchTodayReadings(readingDate = cairoToday()) {
   const supabase = createClient();
-  const today = cairoToday();
   const [
     { data: readings, error: readingsError },
     { data: records, error: recordsError },
@@ -113,11 +112,11 @@ export async function fetchTodayReadings() {
       supabase
         .from("daily_reading")
         .select("id, child_id, reading_date, points")
-        .eq("reading_date", today),
+        .eq("reading_date", readingDate),
       supabase
         .from("points_records")
         .select("id, child_id, record_date, points, activity_name")
-        .eq("record_date", today),
+        .eq("record_date", readingDate),
     ]);
   if (readingsError) throwSupabaseError(readingsError, "fetch today's readings");
   if (recordsError) throwSupabaseError(recordsError, "fetch today's reading records");
@@ -136,29 +135,62 @@ export async function fetchTodayReadings() {
   return [...(readings ?? []), ...activityReadings];
 }
 
-export async function fetchTodayActivityChildIds(activityId: string) {
+export async function fetchTodayParticipationSummary() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("points_records")
+    .select("points, activity_name")
+    .eq("record_date", cairoToday());
+  if (error) throwSupabaseError(error, "fetch today's participation records");
+
+  const records = (data ?? []) as { points: number; activity_name: string | null }[];
+  const participationRecords = records.filter(
+    (record) => !isDailyReadingActivity(record.activity_name ?? "")
+  );
+  return {
+    count: participationRecords.length,
+    points: participationRecords.reduce((sum: number, record) => sum + record.points, 0),
+  };
+}
+
+export async function fetchTodayParticipationChildIds(recordDate = cairoToday()) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("points_records")
+    .select("child_id, activity_name")
+    .eq("record_date", recordDate);
+  if (error) throwSupabaseError(error, "fetch today's participation child ids");
+
+  const records = (data ?? []) as { child_id: string; activity_name: string | null }[];
+  return [...new Set(
+    records
+      .filter((record) => !isDailyReadingActivity(record.activity_name ?? ""))
+      .map((record) => record.child_id)
+  )];
+}
+
+export async function fetchTodayActivityChildIds(activityId: string, recordDate = cairoToday()) {
   const supabase = createClient();
   type ActivityRecord = { child_id: string };
   const { data, error } = await supabase
     .from("points_records")
     .select("child_id")
     .eq("activity_id", activityId)
-    .eq("record_date", cairoToday());
+    .eq("record_date", recordDate);
   if (error) throwSupabaseError(error, "fetch today's activity records");
   return (data as ActivityRecord[] | null ?? []).map((record) => record.child_id);
 }
 
-export async function registerDailyReading(childId: string) {
+export async function registerDailyReading(childId: string, readingDate = cairoToday()) {
   const supabase = createClient();
-  const today = cairoToday();
   const { data, error } = await supabase
     .from("daily_reading")
-    .insert({ child_id: childId, reading_date: today, points: 5 })
+    .insert({ child_id: childId, reading_date: readingDate, points: 5 })
     .select("id, points")
     .single();
   if (error) {
     if (error.code === "23505") {
-      throw new Error("تم تسجيل القراءة لهذا الطفل اليوم بالفعل");
+      throw new Error("تم تسجيل القراءة لهذا الطفل في هذا التاريخ بالفعل");
     }
     throwSupabaseError(error, "register daily reading");
   }
@@ -224,7 +256,11 @@ export async function deleteDailyReadingRecord(readingId: string) {
   if (deleteError) throwSupabaseError(deleteError, "delete daily reading");
 }
 
-export async function awardActivityPoints(childId: string, activityId: string) {
+export async function awardActivityPoints(
+  childId: string,
+  activityId: string,
+  recordDate = cairoToday()
+) {
   const supabase = createClient();
   const { data: activity, error: activityError } = await supabase
     .from("activities")
@@ -234,6 +270,18 @@ export async function awardActivityPoints(childId: string, activityId: string) {
     .single();
   if (activityError) throwSupabaseError(activityError, "load activity before awarding points");
 
+  const { data: existingRecords, error: existingError } = await supabase
+    .from("points_records")
+    .select("id")
+    .eq("child_id", childId)
+    .eq("activity_id", activity.id)
+    .eq("record_date", recordDate)
+    .limit(1);
+  if (existingError) throwSupabaseError(existingError, "check existing activity record");
+  if (existingRecords?.length) {
+    throw new Error("تم تسجيل المشاركة لهذا الطفل في هذا التاريخ بالفعل");
+  }
+
   const { data, error } = await supabase
     .from("points_records")
     .insert({
@@ -241,7 +289,7 @@ export async function awardActivityPoints(childId: string, activityId: string) {
       activity_id: activity.id,
       activity_name: activity.name,
       points: activity.points,
-      record_date: cairoToday(),
+      record_date: recordDate,
     })
     .select("id, points")
     .single();
