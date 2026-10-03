@@ -30,6 +30,11 @@ export default function ReadingPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [readingPoints, setReadingPoints] = useState(5);
   const [selectedActivityId, setSelectedActivityId] = useState("");
+  const [activityMode, setActivityMode] = useState(false);
+
+  useEffect(() => {
+    setActivityMode(new URLSearchParams(window.location.search).get("mode") === "activity");
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -76,9 +81,13 @@ export default function ReadingPage() {
   );
   const missing = filtered.filter((c) => !todayIds.includes(c.id));
   const selectedActivity = activities.find((activity) => activity.id === selectedActivityId);
-  const isReadingMode = !selectedActivityId;
+  const isReadingMode = !activityMode;
 
   async function registerOne(id: string) {
+    if (activityMode && !selectedActivityId) {
+      toast.error("اختاري نوع المشاركة أولًا");
+      return;
+    }
     setBusy(id);
     try {
       const result = isReadingMode
@@ -131,7 +140,11 @@ export default function ReadingPage() {
         title="تسجيل القراءة اليومية"
         subtitle={`تاريخ اليوم: ${formatDate(cairoToday())} — لا يمكن تكرار التسجيل لنفس الطفل في نفس اليوم`}
         actions={
-          <button className="gold-btn" onClick={registerMany} disabled={!selected.length}>
+          <button
+            className="gold-btn"
+            onClick={registerMany}
+            disabled={!selected.length || (activityMode && !selectedActivityId)}
+          >
             تسجيل المحددين ({selected.length})
           </button>
         }
@@ -146,14 +159,19 @@ export default function ReadingPage() {
         />
         <select
           className="field"
-          value={selectedActivityId}
+          value={activityMode ? selectedActivityId || "choose-activity" : ""}
           onChange={(e) => {
-            setSelectedActivityId(e.target.value);
+            const value = e.target.value;
+            setSelectedActivityId(value === "choose-activity" ? "" : value);
+            setActivityMode(value !== "");
             setSelected([]);
           }}
           aria-label="نوع النقاط"
         >
           <option value="">القراءة اليومية (+{readingPoints})</option>
+          {activityMode ? (
+            <option value="choose-activity" disabled>اختاري المشاركة</option>
+          ) : null}
           {activities.map((activity) => (
             <option key={activity.id} value={activity.id}>
               {activity.name} (+{activity.points})
@@ -171,7 +189,9 @@ export default function ReadingPage() {
       <div className="mb-4 card p-4 font-bold text-navy">
         {isReadingMode
           ? `لم يسجلوا اليوم: ${missing.length} من ${filtered.length}`
-          : `النشاط المختار: ${selectedActivity?.name ?? ""} (+${selectedActivity?.points ?? 0})`}
+          : selectedActivity
+            ? `النشاط المختار: ${selectedActivity.name} (+${selectedActivity.points})`
+            : "اختاري نوع المشاركة أولًا"}
       </div>
 
       {filtered.length === 0 ? (
@@ -203,10 +223,12 @@ export default function ReadingPage() {
                 ) : (
                   <button
                     className="gold-btn"
-                    disabled={busy === child.id}
+                    disabled={busy === child.id || (activityMode && !selectedActivityId)}
                     onClick={() => registerOne(child.id)}
                   >
-                    {busy === child.id
+                    {activityMode && !selectedActivityId
+                      ? "اختاري المشاركة أولًا"
+                      : busy === child.id
                       ? "جاري التسجيل..."
                       : isReadingMode
                         ? `تسجيل القراءة +${readingPoints}`

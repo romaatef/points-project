@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
+  Handshake,
   Percent,
   LayoutDashboard,
   LogOut,
@@ -25,6 +26,7 @@ const links = [
   { href: "/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
   { href: "/children", label: "المخدومين", icon: Users },
   { href: "/reading", label: "تسجيل القراءة", icon: BookOpen },
+  { href: "/reading?mode=activity", label: "تسجيل المشاركة", icon: Handshake },
   { href: "/history", label: "سجل النقاط", icon: NotebookPen },
   { href: "/leaderboard", label: "الترتيب", icon: Medal },
   { href: "/percentages", label: "نسب القراءة الشهرية", icon: Percent },
@@ -34,6 +36,7 @@ const links = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -48,7 +51,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const nav = (
     <nav className="flex flex-col gap-1">
       {links.map((link) => {
-        const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+        const linkPath = link.href.split("?")[0];
+        const activityMode = searchParams.get("mode") === "activity";
+        const isActivityLink = link.href.includes("mode=activity");
+        const active =
+          (pathname === linkPath &&
+            (isActivityLink === activityMode || (linkPath !== "/reading" && !isActivityLink))) ||
+          pathname.startsWith(`${linkPath}/`);
         const Icon = link.icon;
         return (
           <Link
