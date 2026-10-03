@@ -28,6 +28,7 @@ const links = [
   { href: "/history", label: "سجل النقاط", icon: NotebookPen },
   { href: "/leaderboard", label: "الترتيب", icon: Medal },
   { href: "/percentages", label: "نسب القراءة الشهرية", icon: Percent },
+  { href: "/participation-percentages", label: "نسب المشاركة الشهرية", icon: Percent },
   { href: "/activities", label: "الأنشطة والنقاط", icon: Settings2 },
   { href: "/import", label: "استيراد Excel", icon: Upload },
 ];
