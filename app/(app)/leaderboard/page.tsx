@@ -14,6 +14,7 @@ type Period = "day" | "week" | "month" | "total";
 type LeaderboardRow = Pick<Child, "id" | "name" | "group_name"> & {
   total_points: number;
   reading_count: number;
+  participation_count: number;
 };
 
 type RawPointsRecord = {
@@ -67,6 +68,7 @@ function sortRanked(rows: LeaderboardRow[]) {
     (a, b) =>
       b.total_points - a.total_points ||
       b.reading_count - a.reading_count ||
+      b.participation_count - a.participation_count ||
       a.name.localeCompare(b.name, "ar")
   );
 }
@@ -100,6 +102,12 @@ function buildLeaderboardForPeriod(
   period: Period
 ): LeaderboardRow[] {
   if (period === "total") {
+    const participationCountsByChild = new Map<string, number>();
+    for (const record of records) {
+      if (isDailyReadingActivity(record.activity_name ?? "")) continue;
+      participationCountsByChild.set(record.child_id, (participationCountsByChild.get(record.child_id) ?? 0) + 1);
+    }
+
     return sortRanked(
       children.map((child) => ({
         id: child.id,
@@ -107,6 +115,7 @@ function buildLeaderboardForPeriod(
         group_name: child.group_name,
         total_points: child.total_points,
         reading_count: child.reading_count,
+        participation_count: participationCountsByChild.get(child.id) ?? 0,
       }))
     );
   }
@@ -116,6 +125,7 @@ function buildLeaderboardForPeriod(
 
   const pointsByChild = new Map<string, number>();
   const readingDatesByChild = new Map<string, Set<string>>();
+  const participationCountsByChild = new Map<string, number>();
   const countedReadings = new Set<string>();
 
   for (const record of records) {
@@ -133,6 +143,7 @@ function buildLeaderboardForPeriod(
       continue;
     }
 
+    participationCountsByChild.set(childId, (participationCountsByChild.get(childId) ?? 0) + 1);
     pointsByChild.set(childId, (pointsByChild.get(childId) ?? 0) + points);
   }
 
@@ -157,6 +168,7 @@ function buildLeaderboardForPeriod(
       group_name: child.group_name,
       total_points: pointsByChild.get(child.id) ?? 0,
       reading_count: readingDatesByChild.get(child.id)?.size ?? 0,
+      participation_count: participationCountsByChild.get(child.id) ?? 0,
     }))
   );
 }
@@ -241,8 +253,9 @@ export default function LeaderboardPage() {
                 "الترتيب",
                 "اسم الطفل",
                 "المجموعة",
-                period === "total" ? "إجمالي النقاط" : "النقاط",
                 "مرات القراءة",
+                "مرات المشاركة",
+                period === "total" ? "إجمالي النقاط" : "النقاط",
               ].map((h) => (
                 <th key={h} className="px-4 py-3 font-extrabold text-navy">
                   {h}
@@ -256,8 +269,9 @@ export default function LeaderboardPage() {
                 <td className="px-4 py-3 font-extrabold text-gold">{index + 1}</td>
                 <td className="px-4 py-3 font-bold">{child.name}</td>
                 <td className="px-4 py-3">{child.group_name}</td>
-                <td className="px-4 py-3 font-extrabold">{child.total_points}</td>
                 <td className="px-4 py-3">{child.reading_count}</td>
+                <td className="px-4 py-3">{child.participation_count}</td>
+                <td className="px-4 py-3 font-extrabold">{child.total_points}</td>
               </tr>
             ))}
           </tbody>
